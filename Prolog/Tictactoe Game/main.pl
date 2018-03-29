@@ -14,7 +14,7 @@ play :-
     write('===================='), nl,
 	  write('= Prolog TicTacToe ='), nl,
 	  write('===================='), nl, nl,
-	  write('Rem : x starts the game'), nl,
+	  write('Starts the game'), nl,
 	  playAskColor.
 	
 	
