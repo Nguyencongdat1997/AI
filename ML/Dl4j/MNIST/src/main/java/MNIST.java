@@ -1,6 +1,10 @@
+import com.google.common.primitives.Doubles;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.datavec.api.io.labels.ParentPathLabelGenerator;
 import org.datavec.api.split.FileSplit;
 import org.datavec.image.loader.NativeImageLoader;
@@ -15,6 +19,8 @@ import org.deeplearning4j.nn.conf.Updater;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
+import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.deeplearning4j.nn.modelimport.keras.trainedmodels.TrainedModels;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
@@ -23,6 +29,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
+import org.nd4j.linalg.dataset.api.preprocessor.VGG16ImagePreProcessor;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 
@@ -60,7 +67,7 @@ public class MNIST {
     static DataNormalization scaler = new ImagePreProcessingScaler(0,1);
     static MultiLayerNetwork model;
     
-    public static void trainAndSave() throws IOException {        
+    public void trainAndSave() throws IOException {        
         //Initialize the reocrd reader
         //add a listener to extract the name 
         //recordReader.reset();
@@ -118,10 +125,10 @@ public class MNIST {
         System.err.println("Model has been saved.");
 
     }
-    public static void test() throws IOException{
+    public void test() throws IOException{
         //Load the model
         File locationToSave = new File("C:\\Users\\DatGatto\\.deeplearning4j\\mnist.zip");            
-        model = ModelSerializer.restoreMultiLayerNetwork(locationToSave); //true here is to agree to save the Updater
+        model = ModelSerializer.restoreMultiLayerNetwork(locationToSave); 
         System.err.println("Model has been loaded.");
 
         //Test
@@ -144,7 +151,38 @@ public class MNIST {
         System.err.println("Evaluated reuslt: " + eval.stats());
                
     }
-    public static void main(String[] args) throws Exception {
+    public String predictOneImage(String fileLink) throws IOException{
+        
+        // Load the trained model
+        File locationToSave = new File("C:\\Users\\DatGatto\\.deeplearning4j\\mnist.zip");            
+        model = ModelSerializer.restoreMultiLayerNetwork(locationToSave); 
+        //Set image loader        
+        NativeImageLoader loader = new NativeImageLoader(height, width, channels);
+        //Predict
+        File file = new File(fileLink);
+        try{
+            INDArray imageMatrix = loader.asMatrix(file);                    
+            scaler.transform(imageMatrix);
+            INDArray output = model.output(imageMatrix);
+            //return most possible value
+            String outputString = output.toString();
+            String[] splitedTxtOutput = outputString.replaceAll("\\,|\\[|\\]", " ").trim().split(" +");            
+            double max = Doubles.tryParse(splitedTxtOutput[0]);
+            int maxIndex = 0;
+            for (int i =1;i<10;i++){
+                if (max< Doubles.tryParse(splitedTxtOutput[i])){
+                    max = Doubles.tryParse(splitedTxtOutput[i]);
+                    maxIndex = i;
+                }
+            }            
+            return "Prediction: " + maxIndex +" with "+max*100 +"%" ;
+        }
+        catch (IOException ex){
+            System.err.println("Error at loading image."+fileLink);
+            return "Error at loading image";
+        }
+    }
+    public MNIST() throws IOException{
               
         //Prepare to Image Pipeline loading
         trainData = new File("E:\\environment\\git\\AI\\ML\\Data\\MNIST\\mnistasjpg\\largeSet\\trainingSet");
@@ -158,7 +196,6 @@ public class MNIST {
         ParentPathLabelGenerator labelMaker = new ParentPathLabelGenerator();        
         recordReader = new ImageRecordReader(height,width,channels,labelMaker);
         
-        //trainAndSave();       
-        test();
+        
     }
 }
